@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar-Battery Hybrid Predictor</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom slider styles can go here if needed */
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%; 
+            background: #4F46E5; /* Indigo-600 */
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                ☀️🔋 Solar-Battery Predictor
+            </h1>
+            <span class="text-indigo-200 text-sm">ML Powered / Flask API</span>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8 flex flex-col lg:flex-row gap-8">
+        
+        <!-- CONTROL PANEL -->
+        <div class="w-full lg:w-1/3 bg-white p-6 rounded-xl shadow-md space-y-6">
+            <h2 class="text-xl font-bold text-gray-700 border-b pb-2">Control Panel</h2>
+
+            <!-- Solar Inputs -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-semibold text-indigo-600 uppercase">Environment</h3>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Irradiation <span id="val_irr" class="text-indigo-600 font-bold ml-1">0.8</span> kW/m²
+                    </label>
+                    <input type="range" id="irr" min="0" max="1.5" step="0.05" value="0.8" class="range-slider w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Ambient Temp <span id="val_amb" class="text-indigo-600 font-bold ml-1">25</span> °C
+                    </label>
+                    <input type="range" id="amb_temp" min="10" max="50" step="1" value="25" class="range-slider w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- System Inputs -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-semibold text-indigo-600 uppercase">System Config</h3>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Solar System Size <span id="val_sys" class="text-indigo-600 font-bold ml-1">5.0</span> kWp
+                    </label>
+                    <input type="range" id="system" min="1" max="10" step="0.5" value="5.0" class="range-slider w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Current Load <span id="val_load" class="text-indigo-600 font-bold ml-1">1.2</span> kW
+                    </label>
+                    <input type="range" id="load" min="0" max="10" step="0.1" value="1.2" class="range-slider w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+
+            <hr>
+
+            <!-- Battery Inputs -->
+            <div class="space-y-4">
+                <h3 class="text-sm font-semibold text-indigo-600 uppercase">Battery State</h3>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        State of Charge <span id="val_soc" class="text-indigo-600 font-bold ml-1">80</span> %
+                    </label>
+                    <input type="range" id="soc" min="0" max="100" step="1" value="80" class="range-slider w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+            </div>
+            
+            <div class="pt-4 text-center text-xs text-gray-400">
+                Adjust sliders to see real-time predictions
+            </div>
+        </div>
+
+        <!-- RESULTS PANEL -->
+        <div class="w-full lg:w-2/3 space-y-6">
+            
+            <!-- Top Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Solar Output -->
+                <div class="bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-xl shadow-md border border-yellow-100 flex flex-col items-center">
+                    <div class="p-3 bg-yellow-100 rounded-full mb-3 text-yellow-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    </div>
+                    <span class="text-gray-500 text-sm font-medium uppercase tracking-wider">Solar Generation</span>
+                    <span id="res_solar" class="text-4xl font-extrabold text-gray-800 mt-2">-- kW</span>
+                </div>
+
+                <!-- Net Power -->
+                <div id="card_net" class="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col items-center transition-colors duration-300">
+                    <div id="icon_net" class="p-3 bg-gray-100 rounded-full mb-3 text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+                    </div>
+                    <span class="text-gray-500 text-sm font-medium uppercase tracking-wider">Net Power</span>
+                    <span id="res_net" class="text-4xl font-extrabold text-gray-800 mt-2">-- kW</span>
+                </div>
+            </div>
+
+            <!-- Battery Status Bar -->
+            <div class="bg-white p-8 rounded-xl shadow-md border border-gray-100">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-700">Battery Status</h3>
+                    <span id="res_batt_energy" class="text-sm font-medium text-gray-500"> -- / -- kWh</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
+                    <div id="bar_soc" class="bg-green-500 h-6 transition-all duration-500 relative" style="width: 0%"></div>
+                </div>
+                
+                <div class="mt-6 flex items-center gap-4">
+                    <div id="status_badge" class="px-4 py-2 rounded-lg text-sm font-bold bg-gray-100 text-gray-600">
+                        Standby
+                    </div>
+                    <p id="res_time" class="text-xl font-medium text-gray-700">
+                        Initializing...
+                    </p>
+                </div>
+            </div>
+
+            <!-- Visualization Placeholder (Optional for future) -->
+            <!-- <canvas id="chart"></canvas> -->
+
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
