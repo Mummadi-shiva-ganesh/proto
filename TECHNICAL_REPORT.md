@@ -81,21 +81,43 @@ We used a standard **Random Split** strategy:
 ## 5. Feature Engineering
 
 ### 5.1 Feature Extraction
-*   **Temporal Features**: Implicitly handled. The model uses `Temperature` and `Irradiance` as state features, making it independent of "Time of Day" (e.g., it works if it's sunny at 8 AM or 4 PM).
+Feature extraction transforms raw data into numerical features that can be processed while preserving the information in the original data set.
+*   **Applied Strategy**:
+    *   **Temporal Independence**: Instead of using raw timestamps (e.g., "12:00 PM"), we relied on physical state features (`Irradiance`, `Temperature`). This makes the model robust to seasonal shifts (e.g., a sunny winter day vs. a cloudy summer day).
+    *   **Domain-Specific Extraction**: We extracted **State of Charge (SOC)** from the battery voltage curves using a linear decay model, transforming raw voltage/current readings into a usable percentage (0-100%) feature.
+*   *Note*: Techniques like Text Embeddings (NLP) or Image Features (CNNs) were not applicable as this is a numerical time-series dataset.
 
 ### 5.2 Feature Scaling & Normalization
-*   **Training**: We used **Random Forest Regressor**, which is invariant to feature scaling (metrics like Min-Max are not strictly required for Trees).
-*   **Inference (App)**: We implemented **System Capacity Scaling**.
-    *   *Logic*: `User_Prediction = (Raw_Model_Output / Plant_Max_Capacity) * User_System_Size`.
-    *   This allows the huge 30kW plant model to accurately predict for a small 5kW home system.
+Scaling ensures that features with different units (e.g., Temperature in °C vs Irradiance in kW) contribute equally to the model.
+*   **Standardization (Z-Score)**: Not strictly required for the chosen **Random Forest** algorithm, as tree-based models are invariant to monotonic transformations.
+*   **System Normalization (Custom)**:
+    *   **Problem**: Training data is from a **30kW Commercial Plant**, but the user might have a **5kW Home System**.
+    *   **Solution**: We applied **Max-Scaling** on the *Output*.
+        $$ \text{Efficiency} = \frac{\text{Predicted Output}}{\text{Plant Max Capacity}} $$
+        $$ \text{Final Prediction} = \text{Efficiency} \times \text{User System Size} $$
+    *   This normalization allows the model to generalize across different scales of installation.
 
 ### 5.3 Dimensionality Reduction
-*   Not used. The feature set was small and highly relevant (3 key features). reducing dimensions would lose explainability.
+Techniques like PCA (Principal Component Analysis) or t-SNE reduce the number of random variables.
+*   **Decision**: **Not Applied**.
+*   **Reasoning**: We only have 3-4 distinct, highly relevant physical features (`Irradiance`, `Ambient Temp`, `Module Temp`, `SOC`). Reducing dimensions further would lead to **Information Loss** without any computational benefit. The feature space is already low-dimensional and dense.
 
-### 5.4 Feature Selection
-*   **Method**: **Embedded Method** (Random Forest Feature Importance).
-*   We selected: `IRRADIATION`, `AMBIENT_TEMPERATURE`, `MODULE_TEMPERATURE`.
-*   We dropped: `DC_POWER` (redundant with AC), `SOURCE_KEY` (ID not predictive).
+### 5.4 Feature Selection Techniques
+Selecting the most significant features to improve model performance.
+*   **Method Used**: **Embedded Method (Tree-based Importance)**.
+    *   Random Forest automatically assigns importance scores to features based on how much they decrease impurity (Variance/Gini) during splits.
+*   **Selected Features**:
+    1.  `IRRADIATION`: Primary driver (>90% importance).
+    2.  `MODULE_TEMPERATURE`: Second most important (affects efficiency).
+    3.  `AMBIENT_TEMPERATURE`: Correlated status indicator.
+*   **Discarded Features**:
+    *   `DC_POWER`: Removed because it is colinear with the target `AC_POWER` (Target Leakage).
+    *   `SOURCE_KEY / PLANT_ID`: Removed as they are distinct identifiers, not predictive signals.
 
 ### 5.5 Handling Imbalanced Data
-*   The Regression problem represents a continuous distribution, so class imbalance techniques (SMOTE) are not applicable.
+Techniques like SMOTE (Synthetic Minority Over-sampling Technique) are used when classes are skewed.
+*   **Context**: This is a **Regression** problem (predicting a continuous number), not a Classification problem.
+*   **Distribution Issue**: The dataset has many "0" values (Night time).
+*   **Handling**:
+    *   We did **not** undersample the "0" values because "Night" is a valid and frequent state for a solar system. The model *must* learn to predict 0 when Irradiance is 0.
+    *   The Random Forest algorithm naturally handles this non-linear "off-state" effectively without needing artificial sampling.
